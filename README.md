@@ -11,3 +11,4 @@ Following Python packages are used:
 * scipy
 * scikit-learn
 * matplotlib
+* tensorflow
