@@ -311,7 +311,7 @@ else:
         print('----', folder_mapping[pred[0]])
 
     new_list = ['ths is a strange title', 'another strange title too 100']
-    chinese_list= ['战争理论','毛泽东文集', '欧阳修柳宗元苏轼苏辙选集', '费孝通', '[自然的经济史].（美）海尔特·J.弗尔迈伊.扫描版']
+    chinese_list= ['战争理论','欧阳修柳宗元苏轼苏辙选集', '费孝通']
     new_list = [seg_chinese_words(sen) for sen in chinese_list]
     print(new_list)
     newdocs = np.array(new_list)
