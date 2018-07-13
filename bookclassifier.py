@@ -2,6 +2,8 @@ import snownlp
 import os
 import stat
 import pickle
+import argparse
+
 
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
@@ -197,9 +199,10 @@ class TFGraphForTraining:
 
                 training_costs.append(batch_cost)
 
-            print(' -- Epoch %2d '
-                'Avg. Training Loss: %.4f' % (epoch+1, np.mean(training_costs)
-                ))
+            if epoch % 10 == 0:
+                print(' -- Epoch %2d '
+                    'Avg. Training Loss: %.4f' % (epoch+1, np.mean(training_costs)
+                    ))
 
             total_training_costs.append(np.mean(training_costs))
 
@@ -254,7 +257,7 @@ vocab_file = "vocab.pickle"
 class_map_file = 'classmap.pickle'
 data_set_file = "filenamedata"
 
-if False:
+def build_model():
     rootdir = '.'
     title_list = []
     folder_list = []
@@ -283,45 +286,61 @@ if False:
     y = new_folder_list
 
     X_train, X_test, y_train, y_test =\
-        train_test_split(X, y, test_size=0.2,
+        train_test_split(X, y, test_size=0.3,
                     random_state=0, stratify=y)
     # pickle four sets
     save_data_sets(data_set_file, X_train, X_test, y_train, y_test)
 
     tfg = TFGraphForTraining(model_file)
     tfg.build_graph(len(X_test[0]), len(class_mapping.keys()))
-    n_epochs = 3000
+    n_epochs = 4000
     tfg.train_tf(X_train, y_train, n_epochs)
     tfg.verify(X_test, y_test)
 
-else:
-    exist_voc = get_vocabulary(vocab_file)
-    class_mapping = get_vocabulary(class_map_file)
-    print(class_mapping)
-    folder_mapping = inv_dict(class_mapping)
 
-    X_train, X_test, y_train, y_test = load_data_sets(data_set_file)
-    print("Train size:", len(X_train))
-    print("Test size:", len(X_test))
+if __name__ == "__main__":
 
-    tfgload = TFGraph(model_file)
-    for vector in X_test:
-        print(get_original_words(vector, inv_dict(exist_voc)))
-        pred = tfgload.predict(vector)
-        print('----', folder_mapping[pred[0]])
+    argparser = argparse.ArgumentParser(description='Train TensorFlow model to classify books.')
+    #argparser.add_argument("--RAM", dest='RAM_disk', # metavar='Folder-root',
+    #                       type=str, default=None, required=True,
+    #                       help='root of the RAM disk')
+    argparser.add_argument("--train", dest='train', # metavar='Folder-root',
+                           default=False, required=False, action='store_true',
+                           help='work in training moode')
 
-    new_list = ['ths is a strange title', 'another strange title too 100']
-    chinese_list= ['战争理论','欧阳修柳宗元苏轼苏辙选集', '费孝通']
-    new_list = [seg_chinese_words(sen) for sen in chinese_list]
-    print(new_list)
-    newdocs = np.array(new_list)
-    print(newdocs)
+    args = argparser.parse_args()
 
-    add_to_vocabulary(newdocs, exist_voc)
 
-    count3 = CountVectorizer(tokenizer=lambda text: text.split(' '), vocabulary=exist_voc)
-    bag2 = count3.transform(newdocs)
-    print(bag2.toarray())
+    if args.train:
+        build_model()
+    else:
+        exist_voc = get_vocabulary(vocab_file)
+        class_mapping = get_vocabulary(class_map_file)
+        print(class_mapping)
+        folder_mapping = inv_dict(class_mapping)
 
-    for vector in bag2.toarray():
-        print(get_original_words(vector, inv_dict(exist_voc)))
+        X_train, X_test, y_train, y_test = load_data_sets(data_set_file)
+        print("Train size:", len(X_train))
+        print("Test size:", len(X_test))
+
+        tfgload = TFGraph(model_file)
+        for vector in X_test:
+            print(get_original_words(vector, inv_dict(exist_voc)))
+            pred = tfgload.predict(vector)
+            print('----', folder_mapping[pred[0]])
+
+        new_list = ['ths is a strange title', 'another strange title too 100']
+        chinese_list= ['战争理论','欧阳修柳宗元苏轼苏辙选集', '费孝通']
+        new_list = [seg_chinese_words(sen) for sen in chinese_list]
+        print(new_list)
+        newdocs = np.array(new_list)
+        print(newdocs)
+
+        add_to_vocabulary(newdocs, exist_voc)
+
+        count3 = CountVectorizer(tokenizer=lambda text: text.split(' '), vocabulary=exist_voc)
+        bag2 = count3.transform(newdocs)
+        print(bag2.toarray())
+
+        for vector in bag2.toarray():
+            print(get_original_words(vector, inv_dict(exist_voc)))
