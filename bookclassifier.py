@@ -147,7 +147,7 @@ class TFGraphForTraining:
                                 name='layer3')
             self.predictions = {
                 'classes' : tf.argmax(logits, axis=1, name='predicted_classes'),
-                'probabilities' : tf.nn.softmax(logits, name='softmax_tensor')
+                'probabilities' : tf.nn.softmax(logits, name='predict_confidence')
             }
 
 
@@ -189,8 +189,7 @@ class TFGraphForTraining:
         total_training_costs = []
         for epoch in range(n_epochs):
             training_costs = []
-            batch_generator = self.create_batch_generator(
-                                X_train, y_train, batch_size=64)
+            batch_generator = self.create_batch_generator(X_train, y_train)
 
             for batch_X, batch_y in batch_generator:
                 ## prepare a dict to feed data to our network:
@@ -234,6 +233,10 @@ class TFGraph:
         y_pred = self.sess.run('predicted_classes:0',
                             feed_dict={'tf_X:0': [x_test]})
         return y_pred
+
+    def confidence(self, x_test):
+        return self.sess.run('predict_confidence:0',
+                            feed_dict={'tf_X:0': [x_test]})
 
 
 def get_original_words(vector, vocabulary):
@@ -298,6 +301,62 @@ def build_model():
     tfg.verify(X_test, y_test)
 
 
+def get_voc_and_class():
+    exist_voc = get_vocabulary(vocab_file)
+    print(exist_voc)
+    class_mapping = get_vocabulary(class_map_file)
+    print(class_mapping)
+    folder_mapping = inv_dict(class_mapping)
+
+    return exist_voc, folder_mapping
+
+
+def classify(work_folder):
+
+    exist_voc, folder_mapping = get_voc_and_class()
+    tfgload = TFGraph(model_file)
+    count = CountVectorizer(tokenizer=lambda text: text.split(' '), vocabulary=exist_voc)
+
+    old_dir = os.getcwd()
+    os.chdir(work_folder)
+
+    cnt = 0
+    for diritem in os.listdir('.'):
+        try:
+            statdata = os.stat(diritem)
+        except FileNotFoundError as file_err:
+            print(file_err)
+            print("Skip file " + diritem)
+            continue
+
+        mode = statdata.st_mode
+        if stat.S_ISREG(mode):
+            # It's a file, call the callback function
+            print(diritem)
+
+            newdocs = np.array([seg_chinese_words(diritem)])
+
+            matrix = count.transform(newdocs).toarray()
+            pred = tfgload.predict(matrix[0])
+            target_folder = folder_mapping[pred[0]]
+            print('=====> ', target_folder)
+            confidence = tfgload.confidence(matrix[0])[0]
+            confidence = sorted(confidence, reverse=True)[:3]
+            confidence = [100*val for val in confidence]
+            print("Top 3 Confidences(%):", confidence)
+            answer = input("Is this right?(any key==yes/[Enter for No]?")
+            print('--{a}--'.format(a=answer))
+            if len(answer) > 0:
+                # right target.
+                os.renames(diritem, target_folder+'/'+ diritem)
+                # renames() will crate intermediate folder in the target as needed.
+                print(diritem, 'moved.')
+            
+            print('')
+           
+
+    os.chdir(old_dir)
+
 if __name__ == "__main__":
 
     argparser = argparse.ArgumentParser(description='Train TensorFlow model to classify books.')
@@ -308,16 +367,20 @@ if __name__ == "__main__":
                            default=False, required=False, action='store_true',
                            help='work in training moode')
 
+    argparser.add_argument("--work", dest='work', # metavar='Folder-root',
+                           type=str, default=None, required=False, 
+                           help='work in work moode, specify the work folder.')
+
+
     args = argparser.parse_args()
 
 
     if args.train:
         build_model()
+    elif args.work is not None:
+        classify(args.work)
     else:
-        exist_voc = get_vocabulary(vocab_file)
-        class_mapping = get_vocabulary(class_map_file)
-        print(class_mapping)
-        folder_mapping = inv_dict(class_mapping)
+        exist_voc, folder_mapping = get_voc_and_class()
 
         X_train, X_test, y_train, y_test = load_data_sets(data_set_file)
         print("Train size:", len(X_train))
