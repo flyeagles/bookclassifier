@@ -125,7 +125,7 @@ class TFGraphForTraining:
 
     def build_graph(self, feature_count, n_classes):
         g = tf.Graph()
-        n_hidden_nodes = 100
+        n_hidden_nodes = 200
 
         with g.as_default():
             self.tf_X = tf.placeholder(shape=(None, feature_count),
@@ -167,7 +167,7 @@ class TFGraphForTraining:
 
         self.g = g
 
-    def create_batch_generator(self, X, y, batch_size=128, shuffle=False):
+    def create_batch_generator(self, X, y, batch_size=64, shuffle=False):
         X_copy = np.array(X)
         y_copy = np.array(y)
         if shuffle:
@@ -198,7 +198,7 @@ class TFGraphForTraining:
 
                 training_costs.append(batch_cost)
 
-            if epoch % 10 == 0:
+            if epoch % 20 == 0:
                 print(' -- Epoch %2d '
                     'Avg. Training Loss: %.4f' % (epoch+1, np.mean(training_costs)
                     ))
@@ -344,13 +344,15 @@ def classify(work_folder):
             confidence = sorted(confidence, reverse=True)[:3]
             confidence = [100*val for val in confidence]
             print("Top 3 Confidences(%):", confidence)
-            answer = input("Is this right?(any key==yes/[Enter for No]?")
-            print('--{a}--'.format(a=answer))
-            if len(answer) > 0:
-                # right target.
-                os.renames(diritem, target_folder+'/'+ diritem)
-                # renames() will crate intermediate folder in the target as needed.
-                print(diritem, 'moved.')
+            if confidence[0] > 2*confidence[1] or confidence[0] > 6:
+                # we only make action when we have enough confidence on the result
+                answer = input("Is this right?(any key==yes/[Enter for No]?")
+                print('--{a}--'.format(a=answer))
+                if len(answer) > 0:
+                    # right target.
+                    os.renames(diritem, target_folder+'/'+ diritem)
+                    # renames() will crate intermediate folder in the target as needed.
+                    print(diritem, 'moved.')
             
             print('')
            
