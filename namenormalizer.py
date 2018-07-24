@@ -32,6 +32,8 @@ def browse_folder(rootdir, change):
             newfilename = re.sub('【', '[', newfilename)
             newfilename = re.sub('］', ']', newfilename)
             newfilename = re.sub('】', ']', newfilename)
+            newfilename = re.sub('《', '[', newfilename)
+            newfilename = re.sub('》', ']', newfilename)
             newfilename = re.sub('）', ')', newfilename)
             newfilename = re.sub('（', '(', newfilename)
             newfilename = re.sub('\s+', '.', newfilename)
